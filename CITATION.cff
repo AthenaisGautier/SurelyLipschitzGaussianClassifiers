@@ -1,0 +1,12 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: 'R code: Surely Lipschitz Gaussian Classifier'
+message: ''
+type: software
+authors:
+  - given-names: Athénaïs
+    family-names: Gautier
+    email: athenais.gautier@stat.unibe.ch
+    affiliation: 'IMSV, University of Bern'
