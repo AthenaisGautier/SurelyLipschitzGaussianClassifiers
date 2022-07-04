@@ -2,7 +2,6 @@
 # A function that takes a messy dataset (with duplicates in the x) and returns a 
 # Clean table of location, successes and tries. Uses dplyr 
 ####
-
 prepare_data <- function(data, name_index, req.dplyr=TRUE){
   name_index <- c(name_index)
   if(!all(data$class %in% c(-1, 0, 1))){
@@ -25,7 +24,6 @@ prepare_data <- function(data, name_index, req.dplyr=TRUE){
 #### get_discretization_step
 # A function that takes the domain bound in each direction, and gives the step size between nodes along each direction
 ####
-
 get_discretization_step <- function(domain_bounds, n_nodes){
   # Either same number of nodes in every direction, or vector
   n_nodes <- c(n_nodes)
@@ -34,10 +32,22 @@ get_discretization_step <- function(domain_bounds, n_nodes){
   return(c(delta_i))
 }
 
+#### basis_fun_value
+# A function that takes a location_multi_index, the indices of the nodes,
+# and other data, and returns a matrix of the basis functions centered at the nodes evaluated at the new locations
+####
+basis_fun_value <- function(location_multi_index, multi_index_nodes, n_nodes, dim, delta_i){
+  n <- nrow(location_multi_index)
+  return(t(sapply(seq(n), function(k){
+    x <- location_multi_index[k, ]
+    round(pmax(0, 1-pmax(t(abs(multi_index_nodes-x)))), 15)
+  })))
+}
+
+
 #### predict_probability_fullcalc
 # A function that takes a (or several) new directions, values for epsilon (weights), the domain bounds and number of nodes, and predicts the probability at considered new_loc by computing everything
 ####
-
 predict_probability_fullcalc <- function(new_loc, weights, dim,
                                          domain_bounds,
                                          n_nodes){
@@ -53,4 +63,8 @@ predict_probability_fullcalc <- function(new_loc, weights, dim,
   df <- data.frame(x=t(new_loc), GP=GP_values, sigmoid=sigmoid_values)
   return(df)
 }
+
+
+
+
 
