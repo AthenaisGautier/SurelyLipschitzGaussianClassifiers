@@ -1,17 +1,5 @@
-library(invgamma)
-library(numDeriv)
+ibrary(numDeriv)
 
-#### prior_variance
-# A function that gives the prior over the variance (or its log) and its derivative 
-# (so far we use an invGamma 5-5 and we use numerical derivatives)
-####
-prior_variance <- function(sigma2, log=TRUE){
-  require(invgamma)
-  require(numDeriv)
-  res <- dinvgamma(sigma2, 5, 5, log=log)
-  derive <- grad(func=function(x){dinvgamma(sigma2, 5, 5, log=log)})
-  return(list(value=res, grad=derive))
-}
 
 #### prior_lengthscale
 # A function that gives the prior over the lengthscale (or its log) and its derivative 
