@@ -64,7 +64,37 @@ predict_probability_fullcalc <- function(new_loc, weights, dim,
   return(df)
 }
 
-
+#### constraints_matrix
+# A function that creates the constraint matrix Fmat and vector g_i such that Fmat %*% weight <= g_i
+####
+constraints_matrix <- function(multi_index_nodes, dim, 
+                               n_nodes, 
+                               C_lip, delta_i){
+  #We need to identify which nodes are neihbours to one another
+  following_mat <- diag(dim)
+  for(i in seq(n_nodes^dim)){
+    current_node <- multi_index_nodes[, i]
+    followers <- current_node+following_mat
+    admissible <- colSums(followers < n_nodes)==dim
+    n_adm <- sum(admissible)
+    ind_admissible <- multiindex_to_index(followers[, admissible], n_nodes, dim)
+    
+    if(i==1){
+      F_mat <- matrix(0, nrow=n_adm, ncol=n_nodes^dim)
+      F_mat[, i] <- -1
+      F_mat[seq(n_adm), ind_admissible] <- diag(n_adm)
+      g_i <- C_lip * delta_i[admissible]
+    }else{
+      F_temp <- matrix(0, nrow=n_adm, ncol=n_nodes^dim)
+      F_temp[, i] <- -1
+      F_temp[seq(n_adm), ind_admissible] <- diag(n_adm)
+      F_mat <- rbind(F_mat, F_temp)
+      g_temp <- C_lip * delta_i[admissible]
+      g_i <- c(g_i, g_temp)
+    }
+  }
+  return(list(Fmat=rbind(F_mat, -F_mat), g_i=c(g_i, g_i)))
+}
 
 
 
