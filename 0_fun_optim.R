@@ -281,6 +281,11 @@ run_optim_fixed_len <- function(prepared_optim, sd_logtheta=3,
   env_optim <- new.env(parent = empty_env())
   cleaned_data <- prepared_optim$data_clean
   cov <- prepared_optim$cov
+  coef(cov) <- c(lengthscale_candidates, 1)
+  Sigma <- covMat(cov, 
+                  prepared_optim$coord_nodes)
+  invSigma <- solve(Sigma)
+  logdetSigma <- log(det(Sigma))
   res_opt <- constrOptim(theta=weight_start, 
                          f=function(x){
                            res <-EvaluatePostAndItsderivForBoth(weights=x, 
@@ -310,10 +315,7 @@ run_optim_fixed_len <- function(prepared_optim, sd_logtheta=3,
                          ui=-prepared_optim$cstMat$Fmat,
                          ci=-prepared_optim$cstMat$g_i)
   if(return_Hess){
-    coef(cov) <- c(lengthscale_candidates, 1)
-    Sigma <- covMat(cov, 
-                    prepared_optim$coord_nodes)
-    invSigma <- solve(Sigma)
+    
     fun_value<- prepared_optim$fun_value
     GP_value <- as.vector(fun_value %*% res_opt$par)
     tempexp <- exp(-GP_value)

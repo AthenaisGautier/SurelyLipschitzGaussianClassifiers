@@ -2,6 +2,14 @@ library(dplyr)
 library(tmg)
 library(kergp)
 library(ggplot2)
+library(viridis)
+library(rstan)
+library(ggpubr)
+library(ggExtra)
+library(MVN)
+library(mvtnorm)
+
+options(mc.cores = parallel::detectCores())
 
 # pdf_1 <- function(x){
 #   ifelse(x<=0.2, 0.75, 
@@ -104,6 +112,20 @@ ggplot(res, aes(x=x1, y=prob, group=real))+
   xlab("x")+
   labs(caption=paste0("Size of trainset: ", nrow(data)))
 
+# MCMC 
+prep_rstan <- prepare_rstan(data=data, name_index = name_index, domain_bounds = domain_bounds,
+                            dim=dim, n_nodes=n_nodes,
+                            C_lip=C_lip, kernel_choice = kernel_choice,
+                            param_lengthscale = c(lengthscale), mean_val = 0)
+
+set.seed(1)
+fit <- stan(model_code = prep_rstan$scode, model_name = "My model", 
+            data=prep_rstan$data, init=res_optim$weights, 
+            iter = 100000, verbose = FALSE, thin=10, warmup=50000)
+print(fit)
+samp <- rstan::extract(fit)$x
+samp_thin <- samp[seq(1, 10000, 100), ]
+
 # Laplace approximation
 n_simu <- 100
 invCov <- res_optim$Hess
@@ -134,32 +156,54 @@ ggplot(res_laplace, aes(x=x1, y=prob, group=real))+
   xlab("x")+
   labs(caption=paste0("Size of trainset: ", nrow(data)))
 
-indPlot <- c(3, 4)
+indPlot <- c(1, 5)
 joint_density_Laplace <- data.frame(t(t(as.matrix(expand.grid(seq(-1, 1,, 201), 
-                                                   seq(-1, 1,, 201))))*4*
+                                                   seq(-1, 1,, 201))))*2*
                              sqrt(diag(Cov))[indPlot]+
                              res_optim$weights[indPlot]))
 
 colnames(joint_density_Laplace) <- c("x", "y")
-library(mvtnorm)
-library(viridis)
-joint_density_Laplace$value <- apply(joint_density_Laplace, 1, function(x){
+
+joint_density_Laplace$density <- apply(joint_density_Laplace, 1, function(x){
   dmvnorm(x, mean=res_optim$weights[indPlot], sigma=Cov[indPlot, indPlot])
 })
 # plot of the joint density
-ggplot(joint_density_Laplace ) +
-  geom_raster(mapping=aes(x=x, y=y, fill=value))+
-  geom_point(data.frame(x=candidate_weights[,indPlot[1]],
-                        y=candidate_weights[,indPlot[2]]),
-              mapping=aes(x=x, y=y), col="grey", pch="x")+
+plot1 <- ggplot(joint_density_Laplace ) +
+  geom_raster(mapping=aes(x=x, y=y, fill=density))+
+  # geom_point(data.frame(x=candidate_weights[,indPlot[1]],
+              #           y=candidate_weights[,indPlot[2]]),
+              # mapping=aes(x=x, y=y), col="grey", pch="x")+
   coord_cartesian(ylim=range(joint_density_Laplace$y),
                   xlim=range(joint_density_Laplace$x))+
   scale_fill_viridis(
     option = "magma", 
     direction = 1)+
   theme(legend.position = "none")+
-  ylab(paste0("Weight ",indPlot[2], " (at x=", coord_nodes[indPlot[2]],")" ))+
-  xlab(paste0("Weight ",indPlot[1], " (at x=", coord_nodes[indPlot[1]],")" ))+
-  ggtitle("Joint density and samples in the Laplace approximation")
+  ylab(paste0("Weight ", indPlot[2], " (at x=", prepared_optim$coord_nodes[indPlot[2]],")" ))+
+  xlab(paste0("Weight ",indPlot[1], " (at x=", prepared_optim$coord_nodes[indPlot[1]],")" ))+
+  ggtitle("Laplace approximation")+
+  theme_bw()
 
-# MCMC 
+
+# plot of the joint density
+plot2 <- ggplot(data.frame(x=samp[, indPlot[1]],
+                  y=samp[, indPlot[2]]),
+       mapping=aes(x=x, y=y) ) +
+  stat_density_2d(aes(fill = ..density..), geom = "raster", contour = FALSE)+
+  geom_point(data=data.frame(x=samp[, indPlot[1]],
+                             y=samp[, indPlot[2]]), col="grey", pch=".", alpha=0.4)+
+  coord_cartesian(ylim=range(joint_density_Laplace$y),
+                  xlim=range(joint_density_Laplace$x))+
+  scale_fill_viridis(
+    option = "magma", 
+    direction = 1)+
+  theme_bw()+
+  theme(legend.position = "none")+
+  ylab(paste0("Weight ", indPlot[2], " (at x=", prepared_optim$coord_nodes[indPlot[2]],")" ))+
+  xlab(paste0("Weight ",indPlot[1], " (at x=", prepared_optim$coord_nodes[indPlot[1]],")" ))+
+  ggtitle("MCMC")
+
+ggarrange(plot1, plot2, ncol=2, legend = "bottom", common.legend = TRUE)
+
+ggMarginal(plot2, type = "histogram")
+mvn(samp)
