@@ -49,8 +49,11 @@ basis_fun_value <- function(location_multi_index, multi_index_nodes, n_nodes, di
 # A function that takes a (or several) new locations, values for epsilon (weights), the domain bounds and number of nodes, and predicts the probability at considered new_loc by computing everything
 ####
 
-field_predict <- function(new_coord, weights, data, name_index, domain_bounds, dim,
+field_predict <- function(new_coord, weights, name_index, domain_bounds, dim,
                           n_nodes){
+  if(is.null(dim(weights))){
+    weights <- t(as.matrix(weights))
+  }
   # Useful quantities regarding the nodes we consider
   delta_i <- get_discretization_step(domain_bounds, n_nodes)
   multi_index_nodes <- index_to_multiindex(seq(1, n_nodes^dim), n_nodes, dim)
@@ -62,10 +65,10 @@ field_predict <- function(new_coord, weights, data, name_index, domain_bounds, d
   fun_value <- basis_fun_value(location_multi_index=location_multi_index,
                                multi_index_nodes=multi_index_nodes,
                                n_nodes, dim, delta_i)
-  GP_val <- fun_value%*%  t(samp)
+  GP_val <- fun_value%*%  t(weights)
   res <- data.frame(ix = seq(nrow(new_coord)), 
                     GP=c(GP_val), 
-                    real=c(sapply(seq(nrow(samp)), FUN=function(k){
+                    real=c(sapply(seq(nrow(weights)), FUN=function(k){
                       rep(k, nrow(new_coord))})))
   res <- cbind(new_coord[res$ix, , drop=FALSE], res[, -c(1)])
   res$prob <- 1/(1+exp(-res$GP))
