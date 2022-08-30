@@ -1,2 +1,4 @@
 
 rstan.R
+0_functions_optim+laplace.R
+0_likelihood_eval_inC.R
