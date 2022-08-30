@@ -277,7 +277,7 @@ run_optim_twosteps <- function(prepared_optim, sd_logtheta=3,
 ####
 
 run_optim_fixed_len <- function(prepared_optim, sd_logtheta=3,
-                                lengthscale_candidates){
+                                lengthscale_candidates, return_Hess=FALSE){
   env_optim <- new.env(parent = empty_env())
   cleaned_data <- prepared_optim$data_clean
   cov <- prepared_optim$cov
@@ -309,6 +309,22 @@ run_optim_fixed_len <- function(prepared_optim, sd_logtheta=3,
                          },
                          ui=-prepared_optim$cstMat$Fmat,
                          ci=-prepared_optim$cstMat$g_i)
-  
-  return(list(lengthscale=lengthscale_candidates, weights=res_opt$par, value=res_opt$value))
+  if(return_Hess){
+    coef(cov) <- c(lengthscale_candidates, 1)
+    Sigma <- covMat(cov, 
+                    prepared_optim$coord_nodes)
+    invSigma <- solve(Sigma)
+    fun_value<- prepared_optim$fun_value
+    GP_value <- as.vector(fun_value %*% res_opt$par)
+    tempexp <- exp(-GP_value)
+    sigmoid <- 1/(1+tempexp)
+    temp <- fun_value*sigmoid*prepared_optim$data_clean$multiplicity*(1-sigmoid)
+    Hess <- t(fun_value) %*% temp # Sparse ?! -> precision matrix of GMRF are sparse!
+    return(list(lengthscale=lengthscale_candidates, weights=res_opt$par, 
+                value=res_opt$value, Hess=Hess))
+    
+  }else{  
+    return(list(lengthscale=lengthscale_candidates, weights=res_opt$par, value=res_opt$value))
+  }
 }
+
