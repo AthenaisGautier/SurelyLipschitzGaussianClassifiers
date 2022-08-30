@@ -2,3 +2,7 @@
 rstan.R
 0_functions_optim+laplace.R
 0_likelihood_eval_inC.R
+1_rstan_sampling1D.R
+1_working_example_1D_old.R
+.Rhistory
+config.txt
